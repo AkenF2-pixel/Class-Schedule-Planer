@@ -135,6 +135,21 @@ textarea{resize:vertical}
         <div class="row"><label style="flex:2 1 220px">GitHub token<input id="ghtok" type="password" autocomplete="off" placeholder="ghp_..."></label><button class="btn pri" id="ghgo" style="align-self:end">Connect</button><button class="btn" id="ghoff" style="align-self:end" hidden>Disconnect</button></div>
         <p class="sub" id="ghm" style="margin:8px 0 0" role="status"></p>
       </div>
+      <div id="gcup" style="flex:1 1 100%">
+        <h2 style="margin-top:6px">Google Classroom</h2>
+        <p class="sub" style="margin:0 0 8px">Import your Classroom assignments into the Assignments tab. Ones you have turned in are ticked off for you. You need a free Google client ID once. It only asks to read your courses and your own coursework.</p>
+        <div class="row"><label style="flex:2 1 220px">Google OAuth client ID<input id="gcid" autocomplete="off" placeholder="1234567890-abc.apps.googleusercontent.com"></label><button class="btn pri" id="gcgo" style="align-self:end">Import from Classroom</button></div>
+        <p class="sub" id="gcm" style="margin:8px 0 0" role="status"></p>
+        <details style="margin-top:8px"><summary>How to get a client ID</summary>
+          <ol class="sub" style="margin:8px 0 0;padding-left:20px">
+            <li>Open console.cloud.google.com and create a project.</li>
+            <li>Under APIs and services, then Library, enable the Google Classroom API.</li>
+            <li>Set up the OAuth consent screen. Choose External, add your own Google account as a test user, and add the scopes .../auth/classroom.courses.readonly and .../auth/classroom.coursework.me.readonly.</li>
+            <li>Under Credentials, create an OAuth client ID of type Web application. In Authorized JavaScript origins add the address of this page without the path, for example https://your-username.github.io</li>
+            <li>Copy the client ID and paste it above. Google will warn that the app is unverified. Press Advanced, then continue. School accounts may be blocked if your school limits third-party apps.</li>
+          </ol>
+        </details>
+      </div>
       <div id="bkup" style="flex:1 1 100%">
         <h2 style="margin-top:6px">Backup</h2>
         <p class="sub" style="margin:0 0 8px">Save your whole timetable to a file, or load one from another device.</p>
@@ -387,7 +402,7 @@ function mk(cfg){
     g("l").innerHTML=rows.length?rows.map(function(it){
       var c=cls.filter(function(k){return String(k.id)===it.cls})[0],n=Math.round((pd(it.date)-pd(td))/864e5),late=n<0&&!it.done;
       var lab=it.done?"done":n<0?(cfg.done?"overdue":"past"):n===0?"today":n===1?"tomorrow":"in "+n+" days";
-      return '<div class="ir'+(it.done?' done':'')+'">'+(cfg.done?'<input type="checkbox" class="ck" data-id="'+it.id+'"'+(it.done?' checked':'')+' aria-label="Done">':'')+'<button class="item" data-id="'+it.id+'"><span><b>'+esc(it.title)+'</b><br><small>'+esc([c?c.name:"",it.room,it.notes].filter(Boolean).join(" · "))+'</small></span><small'+(late?' class="late"':'')+'>'+it.date+(it.time?' '+it.time:'')+' · '+lab+'</small></button></div>';
+      return '<div class="ir'+(it.done?' done':'')+'">'+(cfg.done?'<input type="checkbox" class="ck" data-id="'+it.id+'"'+(it.done?' checked':'')+' aria-label="Done">':'')+'<button class="item" data-id="'+it.id+'"><span><b>'+esc(it.title)+'</b><br><small>'+esc([c?c.name:(it.course||""),it.room,it.notes].filter(Boolean).join(" · "))+'</small></span><small'+(late?' class="late"':'')+'>'+it.date+(it.time?' '+it.time:'')+' · '+lab+'</small></button></div>';
     }).join(""):'<p class="empty">'+cfg.empty+'</p>';
   }
   function reset(){ed=null;["t","d","h","n"].concat(cfg.room?["r"]:[]).forEach(function(s){g(s).value=""});g("c").value="";g("s").textContent="Add";g("x").hidden=g("del").hidden=true;g("m").textContent="";secs()}
@@ -398,6 +413,7 @@ function mk(cfg){
     var it={id:ed||Date.now(),title:t,cls:g("c").value,date:d,time:g("h").value,room:cfg.room?g("r").value.trim():"",notes:g("n").value.trim()};
     var a=list(),i=a.findIndex(function(z){return z.id===ed});
     if(cfg.done)it.done=i>-1?!!a[i].done:false;
+    if(i>-1){if(a[i].gc)it.gc=a[i].gc;if(a[i].course)it.course=a[i].course}
     if(i>-1)a[i]=it;else a.push(it);
     persist();reset();
   };
@@ -429,7 +445,7 @@ function cleanAll(o){
     if(RD.test(x.date))r.date=x.date;
     else{r.days=(Array.isArray(x.days)?x.days:[]).filter(function(d){return d>=0&&d<=6&&d%1===0});r.weeks=["all","odd","even","3","4"].indexOf(x.weeks)>-1?x.weeks:"all";r.from=+x.from||0;r.until=+x.until||0}
     return r}).filter(function(r){return r.date||r.days.length});
-  function it(x,i,task){var r={id:+x.id||Date.now()+i,title:S(x.title,80),cls:S(String(x.cls||""),30),date:x.date,time:RT.test(x.time)?x.time:"",room:S(x.room,40),notes:S(x.notes,400)};if(task)r.done=!!x.done;return r}
+  function it(x,i,task){var r={id:+x.id||Date.now()+i,title:S(x.title,80),cls:S(String(x.cls||""),30),date:x.date,time:RT.test(x.time)?x.time:"",room:S(x.room,40),notes:S(x.notes,400)};if(task){r.done=!!x.done;r.gc=S(x.gc,80);r.course=S(x.course,80)}return r}
   var ex=(Array.isArray(o.exams)?o.exams:[]).filter(function(x){return x&&typeof x.title==="string"&&RD.test(x.date)}).map(function(x,i){return it(x,i)});
   var ta=(Array.isArray(o.tasks)?o.tasks:[]).filter(function(x){return x&&typeof x.title==="string"&&RD.test(x.date)}).map(function(x,i){return it(x,i,1)});
   var ty=Array.isArray(o.types)?o.types.filter(function(x){return x&&typeof x.name==="string"}).map(function(x){return {name:S(x.name,30),vars:(Array.isArray(x.vars)?x.vars:[]).filter(function(v){return typeof v==="string"}).map(function(v){return S(v,40)})}}):types;
@@ -540,6 +556,78 @@ ghUI();
 if(gh.tok&&gh.id)syncPull();
 setInterval(syncPull,45000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden)syncPull()});
+
+var GCKEY="class-planner-gc-client",GCSC="https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly",gcTok="",gcExp=0,gcSeq=0;
+try{$("#gcid").value=localStorage.getItem(GCKEY)||""}catch(e){}
+function gcMsg(t){$("#gcm").textContent=t}
+function gcLoad(){return new Promise(function(res,rej){
+  if(window.google&&google.accounts&&google.accounts.oauth2)return res();
+  var e=document.getElementById("gsi");
+  if(e){e.addEventListener("load",function(){res()});e.addEventListener("error",function(){rej(new Error("load"))});return}
+  var t=document.createElement("script");t.id="gsi";t.src="https://accounts.google.com/gsi/client";t.async=true;
+  t.onload=function(){res()};t.onerror=function(){rej(new Error("load"))};document.head.appendChild(t);
+})}
+function gcToken(id){return new Promise(function(res,rej){
+  if(gcTok&&Date.now()<gcExp)return res(gcTok);
+  gcLoad().then(function(){
+    var c=google.accounts.oauth2.initTokenClient({client_id:id,scope:GCSC,
+      callback:function(r){if(r.error){rej(new Error(r.error));return}gcTok=r.access_token;gcExp=Date.now()+(+r.expires_in-60)*1000;res(gcTok)},
+      error_callback:function(e){rej(new Error((e&&e.type)||"popup"))}});
+    c.requestAccessToken();
+  },rej);
+})}
+function gcGet(path){return fetch("https://classroom.googleapis.com/v1"+path,{headers:{Authorization:"Bearer "+gcTok}}).then(function(r){if(!r.ok){var e=new Error("HTTP "+r.status);e.status=r.status;throw e}return r.json()})}
+function gcAll(path,key){var out=[];function next(tok){return gcGet(path+(tok?"&pageToken="+encodeURIComponent(tok):"")).then(function(d){out=out.concat(d[key]||[]);return d.nextPageToken&&out.length<1000?next(d.nextPageToken):out})}return next("")}
+function gcLocal(d,t){
+  if(!t)return {date:ymd(new Date(d.year,d.month-1,d.day)),time:""};
+  var u=new Date(Date.UTC(d.year,d.month-1,d.day,t.hours||0,t.minutes||0));
+  return {date:ymd(u),time:String(u.getHours()).padStart(2,"0")+":"+String(u.getMinutes()).padStart(2,"0")};
+}
+function gcMatch(name){var n=String(name).toLowerCase();var k=cls.filter(function(c){if(c.date)return false;var x=c.name.toLowerCase();return x&&(n.indexOf(x)>-1||x.indexOf(n)>-1)})[0];return k?String(k.id):""}
+function gcImport(){
+  var id=$("#gcid").value.trim();
+  if(!id){gcMsg("Paste your Google client ID first.");return}
+  try{localStorage.setItem(GCKEY,id)}catch(e){}
+  gcMsg("Waiting for Google...");
+  gcToken(id).then(function(){
+    gcMsg("Reading your courses...");
+    return gcAll("/courses?courseStates=ACTIVE&studentId=me&pageSize=100","courses");
+  }).then(function(courses){
+    if(!courses.length){gcMsg("No active Classroom courses were found for this account.");return}
+    var added=0,updated=0,skipped=0,min=Date.now()-14*864e5;
+    return Promise.all(courses.map(function(co){
+      return Promise.all([
+        gcAll("/courses/"+co.id+"/courseWork?pageSize=100","courseWork"),
+        gcAll("/courses/"+co.id+"/courseWork/-/studentSubmissions?userId=me&pageSize=100","studentSubmissions").catch(function(){return []})
+      ]).then(function(r){
+        var st={};r[1].forEach(function(x){st[x.courseWorkId]=x.state});
+        var cid=gcMatch(co.name);
+        r[0].forEach(function(w){
+          if(!w.dueDate||!w.title){skipped++;return}
+          var l=gcLocal(w.dueDate,w.dueTime);
+          if(pd(l.date).getTime()<min){skipped++;return}
+          var key=co.id+"/"+w.id,done=st[w.id]==="TURNED_IN"||st[w.id]==="RETURNED";
+          var ex=tasks.filter(function(t){return t.gc===key})[0];
+          if(ex){ex.title=S(w.title,80);ex.date=l.date;ex.time=l.time;ex.course=S(co.name,80);if(!ex.cls&&cid)ex.cls=cid;if(done)ex.done=true;updated++}
+          else{tasks.push({id:Date.now()*1000+(gcSeq++),title:S(w.title,80),cls:cid,date:l.date,time:l.time,room:"",notes:"",done:done,gc:key,course:S(co.name,80)});added++}
+        });
+      });
+    })).then(function(){
+      persist();secs();
+      gcMsg("Imported "+added+" new and updated "+updated+" assignments from "+courses.length+" courses. Skipped "+skipped+" with no due date or older than two weeks.");
+    });
+  }).catch(function(e){
+    var m=String(e&&e.message||e);
+    if(e&&e.status===401)gcTok="";
+    gcMsg(e&&e.status===403?"Google refused access. Check that the Classroom API is enabled for your project and that your school allows this app."
+      :e&&e.status===401?"Google rejected the sign-in. Try again."
+      :m==="load"?"Could not load Google sign-in. Check your connection."
+      :/popup|access_denied|closed|blocked/i.test(m)?"Sign-in was cancelled or blocked. Allow pop-ups for this page and try again."
+      :"Could not import from Classroom. "+m);
+  });
+}
+$("#gcgo").onclick=gcImport;
+gcLoad().catch(function(){});
 </script>
 </body>
 </html>
